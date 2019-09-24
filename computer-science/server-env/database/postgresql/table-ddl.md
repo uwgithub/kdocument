@@ -1,31 +1,43 @@
 #table ddl                                                                   
 ##contents 
 - [删除表](#删除表) 
+- [重命名表](#重命名表)
 - [删除索引](#删除索引) 
-- [增加列](#增加列)                                                                
-- [增加列](#增加列) 
-- [删除列](#删除列) 
-- [修改列类型](#修改列类型) 
+- [列修改](#列修改)                                                                
+- [约束修改](#约束修改) 
 - [异常错误码](#异常错误码) 
 
 
 #删除表
 drop table if exists tag_category_teacher CASCADE;
 
+#重命名表
+  DO $$
+    BEGIN
+        BEGIN
+            alter table 表名 rename to 新表名
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table xx not exists.';
+        END;
+    END;
+  $$;
+
 #删除索引
 drop index if exists ind_tag_context_course;
 
-#增加列
+#列修改
+##增加列
 ALTER TABLE app_quartz_job ADD COLUMN IF NOT EXISTS jar_path  VARCHAR(255)  null;
 
-#删除列
+##删除列
 ALTER TABLE app_post DROP COLUMN IF EXISTS  external_title;
 
-#修改列类型
+##修改列类型
   DO $$
     BEGIN
         BEGIN
             alter table app_quartz_job alter COLUMN remarks type VARCHAR(500);
+            alter table goods alter column sid type character varying;
         EXCEPTION
             WHEN undefined_column THEN RAISE NOTICE 'column remarks not exists in app_quartz_job.';
         END;
@@ -33,16 +45,55 @@ ALTER TABLE app_post DROP COLUMN IF EXISTS  external_title;
   $$;
 
 
-#修改列名
+##修改列名
   DO $$
     BEGIN
         BEGIN
             alter table app_quartz_job rename column remarks to remarks;
+            alter table goods rename column sid to ssid;
         EXCEPTION
             WHEN undefined_column THEN RAISE NOTICE 'column remarks not exists in app_quartz_job.';
         END;
     END;
   $$;
+
+##删除列默认值
+alter table goods  alter column sid drop default;
+
+
+#约束修改
+##添加主键
+alter table cities add PRIMARY KEY(name);
+
+
+##添加外键
+--讲师表增加外键
+DO $$
+    BEGIN
+        BEGIN
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_LEVEL foreign key (level_id) references tenant_teacher_level (id)
+               on delete cascade on update cascade;
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_CATEGORY foreign key (category_id) references tenant_teacher_category (id)
+               on delete cascade on update cascade;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher not exists.';
+        END;
+    END;
+$$;
+
+on update cascade: 被引用行更新时，引用行自动更新； 
+on update restrict: 被引用的行禁止更新；
+on delete cascade: 被引用行删除时，引用行也一起删除；
+on dellete restrict: 被引用的行禁止删除；
+
+##删除外键
+alter table orders drop constraint orders_goods_id_fkey;
+
+##添加唯一约束
+alter table goods add constraint unique_goods_sid unique(sid);
+
+
+
 
 
 #异常错误码
