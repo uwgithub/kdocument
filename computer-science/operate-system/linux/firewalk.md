@@ -97,6 +97,11 @@ systemctl reload iptables
 service iptables save
 systemctl restart iptables  --不能重启,不然就失效了
 
+事实上使用(不要service iptables save,否则丢失配置值):
+-A IN_public_allow -p tcp -m tcp --dport 6379 -m conntrack --ctstate NEW -j ACCEPT
+-A IN_public_allow -p tcp -m tcp --dport 7379 -m conntrack --ctstate NEW -j ACCEPT
+systemctl stop iptables
+systemctl start iptables
 
  -A RH-Firewall-1-INPUT -m state --state NEW -m tcp -p tcp --dport 8080 -j ACCEPT 就可以了，其中 8080 是要开放的端口号，然后重新启动linux的防火墙服务，
 

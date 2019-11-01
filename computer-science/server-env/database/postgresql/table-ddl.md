@@ -1,15 +1,95 @@
 #table ddl                                                                   
 ##contents 
 - [删除表](#删除表) 
+- [删表前备份删后还原](#删表前备份删后还原)
 - [重命名表](#重命名表)
 - [删除索引](#删除索引) 
 - [列修改](#列修改)                                                                
 - [约束修改](#约束修改) 
+- [异常处理机制](#异常处理机制) 
 - [异常错误码](#异常错误码) 
 
 
 #删除表
 drop table if exists tag_category_teacher CASCADE;
+
+
+#删表前备份删后还原
+--主从表业务数据备份
+drop table if exists tenant_teacher_tmp CASCADE;
+DO $$
+    BEGIN
+        BEGIN
+            CREATE TABLE tenant_teacher_tmp AS (SELECT * FROM tenant_teacher) ;
+            delete from tenant_teacher;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher not exists.';
+        END;
+    END;
+$$;
+drop table if exists tenant_teacher_category_tmp CASCADE;
+DO $$
+    BEGIN
+        --DECLARE
+        --    tenant_teacher_category_tmp tenant_teacher_category%ROWTYPE;
+        BEGIN
+            --select * into tenant_teacher_category_tmp from tenant_teacher_category;
+            CREATE TABLE tenant_teacher_category_tmp AS (SELECT * FROM tenant_teacher_category);
+            delete from tenant_teacher_category;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher_category not exists.';
+        END;
+    END;
+$$;
+
+drop table if exists tenant_teacher_level_tmp CASCADE;
+DO $$
+    BEGIN
+        --DECLARE
+        --    tenant_teacher_category_tmp tenant_teacher_category%ROWTYPE;
+        BEGIN
+            --select * into tenant_teacher_level from tenant_teacher_level;
+            CREATE TABLE tenant_teacher_level_tmp AS (SELECT * FROM tenant_teacher_level) ;
+            delete from tenant_teacher_level;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher_level not exists.';
+        END;
+    END;
+$$;
+
+
+--表业务数据还原
+DO $$
+    BEGIN
+        BEGIN
+            insert into tenant_teacher_category select * from tenant_teacher_category_tmp;
+            drop table if exists tenant_teacher_category_tmp;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher_category_tmp not exists.';
+        END;
+    END;
+$$;
+DO $$
+    BEGIN
+        BEGIN
+            insert into tenant_teacher_level select *  from tenant_teacher_level_tmp;
+            drop table if exists tenant_teacher_level_tmp;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher_level_tmp not exists.';
+        END;
+    END;
+$$;
+DO $$
+    BEGIN
+        BEGIN
+            insert into tenant_teacher select * from tenant_teacher_tmp;
+            drop table if exists tenant_teacher_tmp;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher_tmp not exists.';
+        END;
+    END;
+$$;
+
 
 #重命名表
   DO $$
@@ -92,6 +172,32 @@ alter table orders drop constraint orders_goods_id_fkey;
 ##添加唯一约束
 alter table goods add constraint unique_goods_sid unique(sid);
 
+
+#异常全处理机制
+  Exception 
+     when .. then
+     when others then
+  end;
+
+ DO $$
+    BEGIN
+        BEGIN
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_LEVEL foreign key (level_id) references tenant_teacher_level (id)
+               on delete cascade on update cascade;
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_CATEGORY foreign key (category_id) references tenant_teacher_category (id)
+               on delete cascade on update cascade;
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_ORG foreign key (org_id) references app_org (id)
+               on delete cascade on update cascade;
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_USER foreign key (user_id) references app_user (id)
+               on delete cascade on update cascade;
+            alter table tenant_teacher add constraint FK_TENANT_TEACHER_REF_ROLE foreign key (role_id) references app_role (id)
+               on delete cascade on update cascade;
+        EXCEPTION
+            WHEN undefined_table THEN RAISE NOTICE 'table tenant_teacher not exists.';
+            WHEN others THEN RAISE NOTICE 'constraint exists.';
+        END;
+    END;
+$$;
 
 
 
